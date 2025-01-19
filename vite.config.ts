@@ -14,7 +14,7 @@ export default defineConfig({
 	},
 	plugins: [vue(), topLevelAwait(), VitePWA({
 		registerType: "autoUpdate",
-		injectRegister: "auto",
+		injectRegister: "inline",
 		manifest: {
 			name: "Stroboskopbilder",
 			short_name: "Strobo",
@@ -55,6 +55,22 @@ export default defineConfig({
 		},
 		workbox: {
 			globPatterns: ["**/*.{js,html,png,css}"],
+			runtimeCaching: [
+				{
+					urlPattern: "*/*",
+					handler: "NetworkFirst",
+					options: {
+						cacheName: "app",
+						expiration: {
+							maxEntries: 1000,
+							maxAgeSeconds: 31 * 24 * 60 * 60, // month
+						},
+						precacheFallback: {
+							fallbackURL: "/index.html"
+						},
+					},
+				}
+			]
 
 		}
 	})],
