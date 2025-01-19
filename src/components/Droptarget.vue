@@ -37,6 +37,7 @@ function addFile(file: File) {
 function clear() {
 	haveFile.value = false;
 	model.value = null;
+	if (fileElem.value) fileElem.value.value = '';
 	emit("changed")
 }
 
