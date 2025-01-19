@@ -7,5 +7,6 @@ function updateOffline() {
 }
 window.addEventListener("online", updateOffline)
 window.addEventListener("offline", updateOffline)
+updateOffline()
 
 export { offline };
