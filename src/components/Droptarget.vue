@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, useModel, useTemplateRef, watch } from 'vue';
+import { ref, useTemplateRef, watch } from 'vue';
 
 const dragged = ref(false);
 const fileElem = useTemplateRef("file")
