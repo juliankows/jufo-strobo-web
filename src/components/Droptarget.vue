@@ -77,7 +77,7 @@ function error(msg: string) {
 			@drop.prevent="dropped">
 			<span>Datei hierher ziehen</span>
 			<span>oder</span>
-			<button class="select" @click="fileElem?.click">📼 Video Auswählen</button>
+			<button class="select" @click="fileElem?.click">📼 Video auswählen</button>
 		</div>
 		<div class="center" v-if="haveFile">
 			<button @click="clear">Datei Entfernen</button>
