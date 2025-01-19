@@ -22,23 +22,20 @@ let trimend = ref("100");
 
 let progress = ref(0);
 
-let log = ref("")
+// let log = ref("")
 
-function logger(a: any) {
-	log.value += JSON.stringify(a);
-	console.log(a)
-}
 
 let file = ref<File | null>(null);
 
 // let videoelem = document.createElement("video")
 
 function filechange() {
-	logger(file.value)
+	console.log(file.value)
 	if (file.value) {
 		let blob = URL.createObjectURL(file.value);
 		if (!videoelem.value) return;
 		videoelem.value.src = blob;
+		dimensions = { width: 0, height: 0 }
 		stage.value = "options"
 	} else {
 		stage.value = "file"
@@ -66,7 +63,7 @@ async function canplay() {
 	canvas.width = width;
 	dimensions = { width, height }
 	// canvas = new OffscreenCanvas(width, height);
-	logger(dimensions)
+	console.log(dimensions)
 	if (!isRt.value) {
 		videoelem.value.volume = 0
 		videoelem.value.playbackRate = 0.1
@@ -91,7 +88,7 @@ async function start() {
 	vid.currentTime = start
 	let frametime = 1 / frameinterval.value
 	while (vid.currentTime + frametime + 0.05 < end) {
-		logger(`capture ${vid.currentTime}`)
+		console.log(`capture ${vid.currentTime}`)
 		vid.currentTime += frametime
 		progress.value = (vid.currentTime - start) / (end - start);
 		await vid.play()
@@ -108,14 +105,14 @@ let finalimg: Uint8Array | null = null;
 let comparetarget: null | Uint8Array = null;
 
 function compare(img: Uint8Array) {
-	logger("comparing");
+	console.log("comparing");
 	if (!finalimg) {
 		comparetarget = img;
 		finalimg = new Uint8Array(img);
 		for (let i = 0; i < img.length; i += 4) {
 			finalimg[i + 3] = 0;
 		}
-		logger("first image skipped")
+		console.log("first image skipped")
 		return;
 	}
 	if (!comparetarget) return;
@@ -160,7 +157,7 @@ function startRt() {
 		let img = await capture()
 		if (!img) return;
 		compare(img)
-		logger("rt")
+		console.log("rt")
 	}, (1 / frameinterval.value) * 1000)
 }
 
@@ -169,7 +166,11 @@ function stopRt() {
 	videoend()
 	RtRunning.value = false
 	isRt.value = false
-	if(videoelem.value) videoelem.value.src = ""
+	if (videoelem.value) {
+		videoelem.value.src = ""
+		videoelem.value.srcObject = null
+		dimensions = { width: 0, height: 0 }
+	}
 	camstream?.getTracks().forEach(x => x.stop())
 }
 
@@ -191,7 +192,7 @@ async function capture() {
 	return img
 }
 async function videoend() {
-	logger("END")
+	console.log("END")
 	if (!finalimg) return;
 	for (let i = 0; i < finalimg.length; i += 4) {
 		finalimg[i + 3] = 255;
@@ -235,7 +236,7 @@ function trim_move(ev: Event) {
 </script>
 
 <template>
-	
+
 	<!-- <span>{{ stage }} {{ isRt }} {{ RtRunning }}</span> -->
 	<!-- <span>{{ log }}</span> -->
 	<SWReload />
@@ -258,9 +259,6 @@ function trim_move(ev: Event) {
 			<br>
 			<span>Erster Frame als Referenz:</span>
 			<input type="checkbox" name="" id="" v-model="firstframref">
-			<div class="spacer"></div>
-			<button @click="start" v-show="!isRt">Start</button>
-			<br>
 		</div>
 		<progress v-show="stage == 'read' && !isRt" :value="progress" min="0" max="1"></progress>
 		<video src="" ref="videoelem" @canplaythrough="canplay" v-show="stage == 'read' || stage == 'options'"></video>
@@ -269,6 +267,7 @@ function trim_move(ev: Event) {
 			<input type="range" v-model="trimstart" @input="trim_move" min="0" max="100" step="0.1">
 			<span>Ende:</span>
 			<input type="range" v-model="trimend" @input="trim_move" min="0" max="100" step="0.1">
+			<button @click="start" v-show="!isRt" class="center">Start</button>
 		</div>
 		<div class="rtButton">
 			<button v-if="isRt && stage == 'read' && RtRunning" @click="stopRt" class="rtButton">⏹️ Stop</button>
@@ -278,15 +277,17 @@ function trim_move(ev: Event) {
 		<button class="center" @click="download" v-if="stage == 'result'">💾 Download</button>
 		<div class="spacer"></div>
 		<button class="center" @click="restart" v-if="stage == 'result'">Weiters Bild erstellen</button>
+		<div class="spacer"></div>
 	</div>
 	<MyFooter></MyFooter>
 </template>
 
 <style scoped>
 .app {
-	overflow: scroll;
+	overflow-x: auto;
 	height: calc(100vh - 3.5rem);
 }
+
 .options {
 	margin: auto;
 	width: fit-content;
@@ -316,7 +317,9 @@ video {
 
 .trimmer input {
 	display: block;
-	width: 100%;
+	width: calc(100vw - 2rem);
+	margin: 0 auto;
+	margin-bottom: 1rem;
 }
 
 .result {
