@@ -1,12 +1,8 @@
 <script setup lang="ts">
-// import { init, read } from '../wasm/pkg'
 import { onMounted, Ref, ref, useTemplateRef } from 'vue';
 import SWReload from './components/SWReload.vue';
 import Droptarget from './components/Droptarget.vue';
 
-onMounted(() => {
-	// init()
-})
 
 // refs
 let videoelem = useTemplateRef("videoelem")
