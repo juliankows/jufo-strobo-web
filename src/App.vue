@@ -16,8 +16,10 @@ let isRt = ref(false);
 let RtRunning = ref(false);
 let resultblob = ref("");
 
-let trimstart = ref("");
-let trimend = ref("");
+let trimstart = ref("0");
+let trimend = ref("100");
+
+let progress = ref(0);
 
 let file = ref<File | null>(null);
 
@@ -38,6 +40,7 @@ function filechange() {
 
 
 let canvas = document.createElement("canvas")
+// let canvas = new OffscreenCanvas(0, 0);
 let twod = canvas.getContext("2d", { alpha: false, willReadFrequently: true })
 
 let counter = 0; // no ref
@@ -45,15 +48,16 @@ let counter = 0; // no ref
 let dimensions = { width: 0, height: 0 }
 
 async function canplay() {
+	if (stage.value == "read") return;
 	if (!videoelem.value) return
 	let height = videoelem.value?.videoHeight ? videoelem.value?.videoHeight : 0;
 	let width = videoelem.value?.videoWidth ? videoelem.value?.videoWidth : 0;
 	canvas.height = height;
 	canvas.width = width;
 	dimensions = { width, height }
+	// canvas = new OffscreenCanvas(width, height);
 	console.log(dimensions)
 	if (!isRt.value) {
-		console.log("non-rt")
 		videoelem.value.volume = 0
 		videoelem.value.playbackRate = 0.1
 		videoelem.value.loop = false
@@ -81,6 +85,7 @@ async function start() {
 	while (vid.currentTime + frametime + 0.05 < end) {
 		console.log(`capture ${vid.currentTime}`)
 		vid.currentTime += frametime
+		progress.value = (vid.currentTime - start) / (end - start);
 		await vid.play()
 		vid.pause()
 		await delay((frametime * 1000))
@@ -173,7 +178,7 @@ async function capture() {
 	let img = new Uint8Array(idata.data.buffer);
 	return img
 }
-function videoend() {
+async function videoend() {
 	console.log("END")
 	if (!finalimg) return;
 	for (let i = 0; i < finalimg.length; i += 4) {
@@ -183,7 +188,8 @@ function videoend() {
 	twod?.putImageData(id, 0, 0);
 	stage.value = "result"
 	let url = canvas.toDataURL("image/png");
-	resultblob.value = url
+	// let blob = await canvas.convertToBlob()
+	resultblob.value = url//URL.createObjectURL(blob);
 
 }
 function download() {
@@ -240,6 +246,7 @@ function trim_move(ev: Event) {
 		<button @click="start" v-show="!isRt">Start</button>
 		<br>
 	</div>
+	<progress v-show="stage == 'read'" :value="progress" min="0" max="1"></progress>
 	<video src="" ref="videoelem" @canplaythrough="canplay" v-show="stage == 'read' || stage == 'options'"></video>
 	<div v-show="stage == 'options'" class="trimmer">
 		<span>Start:</span>
@@ -279,10 +286,10 @@ function trim_move(ev: Event) {
 
 video {
 	display: block;
-	margin: 0 auto;
+	margin: 0.5rem auto;
 	margin-top: 1rem;
 	max-width: calc(100vw - 1rem);
-	max-height: 50vh;
+	max-height: calc(100vh - 10rem);
 }
 
 .trimmer input {
@@ -294,6 +301,13 @@ video {
 	display: block;
 	margin: .5rem auto;
 	max-width: calc(100vw - 1rem);
+	max-height: calc(100vh - 6rem);
+}
+
+progress {
+	display: block;
+	margin: 0.5rem auto;
+	width: calc(100% - 4rem);
 }
 
 div.rtButton {
