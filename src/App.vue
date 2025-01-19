@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, Ref, ref, useTemplateRef } from 'vue';
+import { Ref, ref, useTemplateRef } from 'vue';
 import SWReload from './components/SWReload.vue';
 import Droptarget from './components/Droptarget.vue';
 
@@ -11,10 +11,13 @@ let videoelem = useTemplateRef("videoelem")
 let threshold = ref(40);
 let frameinterval = ref(10);
 let firstframref = ref(true);
-let stage: Ref<"file" | "options" | "read" | "generate" | "result"> = ref("file");
+let stage: Ref<"file" | "options" | "read" | "result"> = ref("file");
 let isRt = ref(false);
 let RtRunning = ref(false);
 let resultblob = ref("");
+
+let trimstart = ref("");
+let trimend = ref("");
 
 let file = ref<File | null>(null);
 
@@ -71,9 +74,11 @@ async function start() {
 	finalimg = null; // reset for next run
 	let vid = videoelem.value
 	resultblob.value = ""
-	vid.currentTime = 0
+	let start = (parseFloat(trimstart.value) / 100) * vid.duration;
+	let end = (parseFloat(trimend.value) / 100) * vid.duration;
+	vid.currentTime = start
 	let frametime = 1 / frameinterval.value
-	while (vid.currentTime + frametime + 0.05 < vid.duration) {
+	while (vid.currentTime + frametime + 0.05 < end) {
 		console.log(`capture ${vid.currentTime}`)
 		vid.currentTime += frametime
 		await vid.play()
@@ -120,7 +125,7 @@ let rtiv = 0;
 
 async function selectRT() {
 	if (!videoelem.value) return;
-	let cam = await navigator.mediaDevices.getUserMedia({ video: {facingMode: "environment"} })
+	let cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
 	if (!cam) {
 		restart();
 		return;
@@ -166,15 +171,10 @@ async function capture() {
 	twod.drawImage(videoelem.value, 0, 0, width, height)
 	let idata = twod.getImageData(0, 0, width, height);
 	let img = new Uint8Array(idata.data.buffer);
-	//if (imgelem.value)
-	//	imgelem.value.src = canvas.toDataURL("image/png")
-	//images.push(img);
 	return img
 }
 function videoend() {
 	console.log("END")
-	stage.value = "generate"
-	// let result = read(images, dimensions.width, dimensions.height, true, threshold.value)
 	if (!finalimg) return;
 	for (let i = 0; i < finalimg.length; i += 4) {
 		finalimg[i + 3] = 255;
@@ -182,7 +182,7 @@ function videoend() {
 	let id = new ImageData(new Uint8ClampedArray(finalimg), dimensions.width, dimensions.height);
 	twod?.putImageData(id, 0, 0);
 	stage.value = "result"
-	let url = canvas.toDataURL("image/png");//URL.createObjectURL(new Blob([finalimg], { type: "image/png" }))
+	let url = canvas.toDataURL("image/png");
 	resultblob.value = url
 
 }
@@ -206,6 +206,13 @@ function restart() {
 	stage.value = 'file'
 }
 
+function trim_move(ev: Event) {
+	let target: HTMLInputElement = ev.target as HTMLInputElement;
+	if (!videoelem.value) return;
+	let part = parseFloat(target.value) / 100
+	videoelem.value.currentTime = part * videoelem.value.duration;
+}
+
 
 </script>
 
@@ -214,7 +221,7 @@ function restart() {
 	<div class="spacer"></div>
 	<Droptarget @changed="filechange" v-show="stage == 'file' || stage == 'options'" v-model="file" />
 	<div class="spacer center">
-		<button @click="selectRT" v-if="stage == 'file'" class="center">🎥 Webcam verwenden</button>
+		<button @click="selectRT" v-if="stage == 'file'" class="center">🎥 Kamera verwenden</button>
 	</div>
 	<div class="options" v-show="stage == 'options' || (isRt && !RtRunning)">
 		<span>Schwellwert</span>
@@ -233,12 +240,17 @@ function restart() {
 		<button @click="start" v-show="!isRt">Start</button>
 		<br>
 	</div>
-	<video src="" ref="videoelem" @canplaythrough="canplay" v-show="stage == 'read'"></video>
+	<video src="" ref="videoelem" @canplaythrough="canplay" v-show="stage == 'read' || stage == 'options'"></video>
+	<div v-show="stage == 'options'" class="trimmer">
+		<span>Start:</span>
+		<input type="range" v-model="trimstart" @input="trim_move" min="0" max="100" step="0.1">
+		<span>Ende:</span>
+		<input type="range" v-model="trimend" @input="trim_move" min="0" max="100" step="0.1">
+	</div>
 	<div class="rtButton">
 		<button v-if="isRt && stage == 'read' && RtRunning" @click="stopRt" class="rtButton">⏹️ Stop</button>
 		<button v-if="isRt && stage == 'read' && !RtRunning" @click="startRt" class="rtButton">🔴 Start</button>
 	</div>
-	<span class="center" v-if="stage == 'generate'">Stroboskopbild wird erstellet...</span>
 	<img :src="resultblob" alt="" v-if="stage == 'result'" class="result">
 	<button class="center" @click="download" v-if="stage == 'result'">💾 Download</button>
 	<div class="spacer"></div>
@@ -266,12 +278,21 @@ function restart() {
 }
 
 video {
-	margin: 0 .5rem;
+	display: block;
+	margin: 0 auto;
+	margin-top: 1rem;
 	max-width: calc(100vw - 1rem);
+	max-height: 50vh;
+}
+
+.trimmer input {
+	display: block;
+	width: 100%;
 }
 
 .result {
-	margin: 0 .5rem;
+	display: block;
+	margin: .5rem auto;
 	max-width: calc(100vw - 1rem);
 }
 
