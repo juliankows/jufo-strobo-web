@@ -1,27 +1,36 @@
 <script lang="ts" setup>
-import { useRegisterSW } from 'virtual:pwa-register/vue';
+// import { useRegisterSW } from 'virtual:pwa-register/vue';
 import { offline } from '../lib'
 
-let { updateServiceWorker, needRefresh } = useRegisterSW()
+// let sw: ServiceWorkerRegistration | null = null;
+// let { updateServiceWorker, needRefresh } = useRegisterSW({
+//     onRegisteredSW: (_, s) => {
+//         if (!s) return;
+//         sw = s;
+//     }
+// })
 
-async function refresh() {
-    console.log("click")
-    if (needRefresh.value) {
-        console.log("update")
-        updateServiceWorker()
-    } else {
-        console.log("refresh")
-        if (!offline.value) await clear()
-        window.location.reload()
-    }
-}
-async function clear() {
-    console.log("clearing")
-    let keys = await caches.keys();
-    for (let key of keys) {
-        await caches.delete(key)
-    }
-}
+
+// async function refresh() {
+//     console.log("click")
+//     if (needRefresh.value) {
+//         console.log("update")
+//         updateServiceWorker()
+//     } else {
+//         console.log("refresh")
+//         if (!offline.value) await clear()
+//         window.location.reload()
+//     }
+// }
+// async function clear() {
+//     console.log("clearing")
+//     await sw?.unregister()
+//     let keys = await caches.keys();
+//     for (let key of keys) {
+//         await caches.delete(key)
+//     }
+//     updateServiceWorker()
+// }
 let version = GIT_VERSION
 </script>
 
@@ -29,8 +38,8 @@ let version = GIT_VERSION
     <div class="footer">
         <span class="online">{{ offline ? "💾" : "🌐" }}</span>
         <span class="version center">{{ version }}</span>
-        <a class="right reload" @click="refresh" href="javascript:">{{ needRefresh ? "Update" :
-            "Neu Laden" }}</a>
+        <!-- <a class="right reload" @click="refresh" href="javascript:">{{ needRefresh ? "Update" : -->
+            <!-- "Neu Laden" }}</a> -->
     </div>
 </template>
 
