@@ -43,6 +43,9 @@ function clear() {
 
 watch(model, (newV, _) => {
 	haveFile.value = !!newV;
+	if (!haveFile.value) {
+		if (fileElem.value) fileElem.value.value = '';
+	}
 })
 
 function dropped(ev: DragEvent) {
