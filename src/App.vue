@@ -239,48 +239,54 @@ function trim_move(ev: Event) {
 	<!-- <span>{{ stage }} {{ isRt }} {{ RtRunning }}</span> -->
 	<!-- <span>{{ log }}</span> -->
 	<SWReload />
-	<div class="spacer"></div>
-	<Droptarget @changed="filechange" v-show="stage == 'file' || stage == 'options'" v-model="file" />
-	<div class="spacer center">
-		<button @click="selectRT" v-if="stage == 'file'" class="center">🎥 Kamera verwenden</button>
-	</div>
-	<div class="options" v-show="stage == 'options' || (isRt && !RtRunning)">
-		<span>Schwellwert</span>
-		<br>
-		<input type="number" name="" id="" min="0" max="255" :value="threshold"
-			@input="e => threshold = parseInt((e.target as HTMLInputElement).value)">
-		<br>
-		<span>Bildwiderholrate</span>
-		<br>
-		<input type="number" name="" id="" min="0" max="60" :value="frameinterval"
-			@input="e => frameinterval = parseInt((e.target as HTMLInputElement).value)">
-		<br>
-		<span>Erster Frame als Referenz:</span>
-		<input type="checkbox" name="" id="" v-model="firstframref">
+	<div class="app">
 		<div class="spacer"></div>
-		<button @click="start" v-show="!isRt">Start</button>
-		<br>
+		<Droptarget @changed="filechange" v-show="stage == 'file' || stage == 'options'" v-model="file" />
+		<div class="spacer center">
+			<button @click="selectRT" v-if="stage == 'file'" class="center">🎥 Kamera verwenden</button>
+		</div>
+		<div class="options" v-show="stage == 'options' || (isRt && !RtRunning)">
+			<span>Schwellwert</span>
+			<br>
+			<input type="number" name="" id="" min="0" max="255" :value="threshold"
+				@input="e => threshold = parseInt((e.target as HTMLInputElement).value)">
+			<br>
+			<span>Bildwiderholrate</span>
+			<br>
+			<input type="number" name="" id="" min="0" max="60" :value="frameinterval"
+				@input="e => frameinterval = parseInt((e.target as HTMLInputElement).value)">
+			<br>
+			<span>Erster Frame als Referenz:</span>
+			<input type="checkbox" name="" id="" v-model="firstframref">
+			<div class="spacer"></div>
+			<button @click="start" v-show="!isRt">Start</button>
+			<br>
+		</div>
+		<progress v-show="stage == 'read' && !isRt" :value="progress" min="0" max="1"></progress>
+		<video src="" ref="videoelem" @canplaythrough="canplay" v-show="stage == 'read' || stage == 'options'"></video>
+		<div v-show="stage == 'options'" class="trimmer">
+			<span>Start:</span>
+			<input type="range" v-model="trimstart" @input="trim_move" min="0" max="100" step="0.1">
+			<span>Ende:</span>
+			<input type="range" v-model="trimend" @input="trim_move" min="0" max="100" step="0.1">
+		</div>
+		<div class="rtButton">
+			<button v-if="isRt && stage == 'read' && RtRunning" @click="stopRt" class="rtButton">⏹️ Stop</button>
+			<button v-if="isRt && stage == 'read' && !RtRunning" @click="startRt" class="rtButton">🔴 Start</button>
+		</div>
+		<img :src="resultblob" alt="" v-if="stage == 'result'" class="result">
+		<button class="center" @click="download" v-if="stage == 'result'">💾 Download</button>
+		<div class="spacer"></div>
+		<button class="center" @click="restart" v-if="stage == 'result'">Weiters Bild erstellen</button>
 	</div>
-	<progress v-show="stage == 'read' && !isRt" :value="progress" min="0" max="1"></progress>
-	<video src="" ref="videoelem" @canplaythrough="canplay" v-show="stage == 'read' || stage == 'options'"></video>
-	<div v-show="stage == 'options'" class="trimmer">
-		<span>Start:</span>
-		<input type="range" v-model="trimstart" @input="trim_move" min="0" max="100" step="0.1">
-		<span>Ende:</span>
-		<input type="range" v-model="trimend" @input="trim_move" min="0" max="100" step="0.1">
-	</div>
-	<div class="rtButton">
-		<button v-if="isRt && stage == 'read' && RtRunning" @click="stopRt" class="rtButton">⏹️ Stop</button>
-		<button v-if="isRt && stage == 'read' && !RtRunning" @click="startRt" class="rtButton">🔴 Start</button>
-	</div>
-	<img :src="resultblob" alt="" v-if="stage == 'result'" class="result">
-	<button class="center" @click="download" v-if="stage == 'result'">💾 Download</button>
-	<div class="spacer"></div>
-	<button class="center" @click="restart" v-if="stage == 'result'">Weiters Bild erstellen</button>
 	<MyFooter></MyFooter>
 </template>
 
 <style scoped>
+.app {
+	overflow: scroll;
+	height: calc(100vh - 3.5rem);
+}
 .options {
 	margin: auto;
 	width: fit-content;

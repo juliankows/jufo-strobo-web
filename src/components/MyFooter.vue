@@ -25,9 +25,9 @@ let version = GIT_VERSION
 <style scoped>
 .footer {
     bottom: 0rem;
-    position: absolute;
     background-color: #ccc;
     height: 2rem;
+		position: fixed;
     padding: .75rem 1rem;
     width: calc(100vw - 2rem);
     display: flex;
