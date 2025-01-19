@@ -1,13 +1,17 @@
 use std::{collections::VecDeque, error::Error, io::Cursor};
 
-use image::{ImageBuffer, Rgba, RgbaImage};
+use image::{GenericImageView, ImageBuffer, Rgba, RgbaImage};
 use itertools::Itertools;
+use log::{debug, error};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn init() -> String {
 	console_error_panic_hook::set_once();
-	console_log::init_with_level(log::Level::Trace).unwrap();
+	let err = console_log::init_with_level(log::Level::Trace);
+	if let Err(e) = err {
+		error!("{e:?}")
+	}
 	format!("Hello, World!")
 }
 type Image = ImageBuffer<Rgba<u8>, Vec<u8>>;
@@ -27,18 +31,32 @@ pub fn read(
 		})
 		.collect::<VecDeque<_>>();
 	let mut target = images.pop_front().ok_or(JsError::new("no first image"))?;
+	let mut mask = RgbaImage::new(width, height);
 	let mut compare_target = target.clone();
 
-	for mut img in images.iter_mut() {
+	for (i, mut img) in images.iter_mut().enumerate() {
+		debug!("image {i}");
 		let newcompare = if from_first { None } else { Some(img.clone()) };
 		compare(&mut img, &compare_target, threshold);
 		if let Some(n) = newcompare {
 			compare_target = n
 		};
 		target
-			.iter_mut()
-			.zip(img.iter())
-			.for_each(|(t, s)| *t = t.saturating_add(*s));
+			.pixels_mut()
+			.zip(mask.pixels())
+			.zip(img.pixels())
+			.for_each(|((t, m), i)| {
+				if i.0[3] < 128 || m.0[0] > 128 {
+					return;
+				}
+				t.0 = i.0
+			});
+		mask.pixels_mut().zip(img.pixels()).for_each(|(m, i)| {
+			if i.0[3] > 128 {
+				// alpha
+				m.0 = [255, 255, 255, 255]
+			}
+		});
 	}
 	let mut output_png = Vec::new();
 	target
@@ -62,9 +80,9 @@ fn compare(a: &mut Image, b: &Image, threshold: u8) {
 			} else {
 				0
 			};
-			*ar = res;
-			*ag = res;
-			*ab = res;
-			*aa = 255 // alpha
+			//*ar = res;
+			//*ag = res;
+			//*ab = res; // white image
+			*aa = res // alpha
 		});
 }
