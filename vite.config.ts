@@ -3,10 +3,17 @@ import vue from '@vitejs/plugin-vue'
 import topLevelAwait from 'vite-plugin-top-level-await'
 import { VitePWA } from 'vite-plugin-pwa'
 
+import * as child from "child_process";
+
+const git_version = child.execSync("git describe --long --dirty --tags --always").toString().replaceAll("\n", "");
+
 // https://vite.dev/config/
 export default defineConfig({
+	define: {
+		GIT_VERSION: JSON.stringify(git_version)
+	},
 	plugins: [vue(), topLevelAwait(), VitePWA({
-		registerType: "prompt",
+		registerType: "autoUpdate",
 		injectRegister: "auto",
 		manifest: {
 			name: "Stroboskopbilder",
@@ -47,7 +54,8 @@ export default defineConfig({
 			enabled: false
 		},
 		workbox: {
-			globPatterns: ["**/*.{js,html,png,css}"]
+			globPatterns: ["**/*.{js,html,png,css}"],
+
 		}
 	})],
 })

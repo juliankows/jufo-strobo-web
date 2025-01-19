@@ -36,14 +36,14 @@ async function close() {
 				Diese Webseite kann nun offline verwendet werden.
 			</span>
 			<span v-else>
-				New content available, click on reload button to update.
+				Eine neue Version dieser Website ist verfügbar.
 			</span>
 		</div>
 		<button v-if="needRefresh" @click="updateServiceWorker()">
-			Reload
+			Installieren
 		</button>
-		<button @click="close" v-if="needRefresh">
-			Close
+		<button @click="close" v-if="needRefresh" class="secondary">
+			Abbrechen
 		</button>
 		<span class="timer" :style="timerstyle" v-if="timer > 0 && offlineReady"></span>
 	</div>

@@ -2,6 +2,7 @@
 import { Ref, ref, useTemplateRef } from 'vue';
 import SWReload from './components/SWReload.vue';
 import Droptarget from './components/Droptarget.vue';
+import MyFooter from './components/MyFooter.vue';
 
 
 // refs
@@ -21,12 +22,19 @@ let trimend = ref("100");
 
 let progress = ref(0);
 
+let log = ref("")
+
+function logger(a: any) {
+	log.value += JSON.stringify(a);
+	console.log(a)
+}
+
 let file = ref<File | null>(null);
 
 // let videoelem = document.createElement("video")
 
 function filechange() {
-	console.log(file.value)
+	logger(file.value)
 	if (file.value) {
 		let blob = URL.createObjectURL(file.value);
 		if (!videoelem.value) return;
@@ -47,8 +55,10 @@ let counter = 0; // no ref
 
 let dimensions = { width: 0, height: 0 }
 
+let camstream: MediaStream | null = null;
+
 async function canplay() {
-	if (stage.value == "read") return;
+	if (stage.value == "read" && dimensions.width > 0) return;
 	if (!videoelem.value) return
 	let height = videoelem.value?.videoHeight ? videoelem.value?.videoHeight : 0;
 	let width = videoelem.value?.videoWidth ? videoelem.value?.videoWidth : 0;
@@ -56,15 +66,13 @@ async function canplay() {
 	canvas.width = width;
 	dimensions = { width, height }
 	// canvas = new OffscreenCanvas(width, height);
-	console.log(dimensions)
+	logger(dimensions)
 	if (!isRt.value) {
 		videoelem.value.volume = 0
 		videoelem.value.playbackRate = 0.1
 		videoelem.value.loop = false
 		await videoelem.value.play()
 		videoelem.value.pause()
-	} else {
-
 	}
 }
 
@@ -83,7 +91,7 @@ async function start() {
 	vid.currentTime = start
 	let frametime = 1 / frameinterval.value
 	while (vid.currentTime + frametime + 0.05 < end) {
-		console.log(`capture ${vid.currentTime}`)
+		logger(`capture ${vid.currentTime}`)
 		vid.currentTime += frametime
 		progress.value = (vid.currentTime - start) / (end - start);
 		await vid.play()
@@ -100,13 +108,14 @@ let finalimg: Uint8Array | null = null;
 let comparetarget: null | Uint8Array = null;
 
 function compare(img: Uint8Array) {
+	logger("comparing");
 	if (!finalimg) {
 		comparetarget = img;
 		finalimg = new Uint8Array(img);
 		for (let i = 0; i < img.length; i += 4) {
 			finalimg[i + 3] = 0;
 		}
-		console.log("first image skipped")
+		logger("first image skipped")
 		return;
 	}
 	if (!comparetarget) return;
@@ -126,12 +135,12 @@ function compare(img: Uint8Array) {
 	}
 	if (!firstframref.value) comparetarget = img;
 }
-let rtiv = 0;
+let rtiv: number = 0;
 
 async function selectRT() {
 	if (!videoelem.value) return;
-	let cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-	if (!cam) {
+	camstream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+	if (!camstream) {
 		restart();
 		return;
 	}
@@ -139,7 +148,8 @@ async function selectRT() {
 	RtRunning.value = false;
 	finalimg = null;
 	comparetarget = null;
-	videoelem.value.srcObject = cam
+	videoelem.value.srcObject = camstream
+	dimensions = { width: videoelem.value.width, height: videoelem.value.height }
 	await videoelem.value.play()
 	stage.value = 'read';
 }
@@ -150,7 +160,7 @@ function startRt() {
 		let img = await capture()
 		if (!img) return;
 		compare(img)
-		console.log("rt")
+		logger("rt")
 	}, (1 / frameinterval.value) * 1000)
 }
 
@@ -159,6 +169,8 @@ function stopRt() {
 	videoend()
 	RtRunning.value = false
 	isRt.value = false
+	if(videoelem.value) videoelem.value.src = ""
+	camstream?.getTracks().forEach(x => x.stop())
 }
 
 
@@ -179,7 +191,7 @@ async function capture() {
 	return img
 }
 async function videoend() {
-	console.log("END")
+	logger("END")
 	if (!finalimg) return;
 	for (let i = 0; i < finalimg.length; i += 4) {
 		finalimg[i + 3] = 255;
@@ -223,6 +235,9 @@ function trim_move(ev: Event) {
 </script>
 
 <template>
+	
+	<!-- <span>{{ stage }} {{ isRt }} {{ RtRunning }}</span> -->
+	<!-- <span>{{ log }}</span> -->
 	<SWReload />
 	<div class="spacer"></div>
 	<Droptarget @changed="filechange" v-show="stage == 'file' || stage == 'options'" v-model="file" />
@@ -246,7 +261,7 @@ function trim_move(ev: Event) {
 		<button @click="start" v-show="!isRt">Start</button>
 		<br>
 	</div>
-	<progress v-show="stage == 'read'" :value="progress" min="0" max="1"></progress>
+	<progress v-show="stage == 'read' && !isRt" :value="progress" min="0" max="1"></progress>
 	<video src="" ref="videoelem" @canplaythrough="canplay" v-show="stage == 'read' || stage == 'options'"></video>
 	<div v-show="stage == 'options'" class="trimmer">
 		<span>Start:</span>
@@ -262,6 +277,7 @@ function trim_move(ev: Event) {
 	<button class="center" @click="download" v-if="stage == 'result'">💾 Download</button>
 	<div class="spacer"></div>
 	<button class="center" @click="restart" v-if="stage == 'result'">Weiters Bild erstellen</button>
+	<MyFooter></MyFooter>
 </template>
 
 <style scoped>

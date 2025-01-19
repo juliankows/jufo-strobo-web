@@ -14,3 +14,6 @@ button {
 button:not(:last-child) {
 	margin-right: .5rem;
 }
+button.secondary {
+	background-color: #888;
+}
